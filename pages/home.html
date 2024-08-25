@@ -7,14 +7,13 @@
       justify-content: center;
       align-items: center;
       flex-direction: column;
-      min-height: 300px;
+      min-height: 80vh;
       text-align: center;
       font-size: 20px;
     }
   </style>
   <div class="container">
-    ofa.js 应用运行器
-    <br />
+    <h1>ofa.js 应用运行器</h1>
     不需要拥有服务器，直接运行你的 ofa.js 应用。
     <div style="margin-top: 8px">
       <p-button
@@ -31,6 +30,15 @@
         on:change="fileChange"
       />
     </div>
+    <h4>已安装的应用</h4>
+    <p-list>
+      <x-fill :value="appList">
+        <p-list-item button on:click="$host.openApp($data)">
+          {{$data.name}}
+          <span secondary>{{$data.href}}</span>
+        </p-list-item>
+      </x-fill>
+    </p-list>
   </div>
   <script>
     export default async ({ load }) => {
@@ -50,7 +58,21 @@
           appList: [],
         },
         proto: {
-          async reloadAppList() {},
+          openApp(data) {
+            window.open(data.href);
+          },
+          async reloadAppList() {
+            const list = [];
+
+            for await (let item of appsHandle.values()) {
+              list.push({
+                name: item.name,
+                href: `/$/${item.path}/index.html`,
+              });
+            }
+
+            this.appList = list;
+          },
           async fileChange(e) {
             const files = await fileFilter(e.target.files);
             e.target.value = "";
