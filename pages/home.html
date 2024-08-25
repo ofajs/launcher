@@ -1,0 +1,108 @@
+<template page>
+  <l-m src="@pui/button/button.html"></l-m>
+  <l-m src="@pui/list/list.html"></l-m>
+  <style>
+    .container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      min-height: 300px;
+      text-align: center;
+      font-size: 20px;
+    }
+  </style>
+  <div class="container">
+    ofa.js 应用运行器
+    <br />
+    不需要拥有服务器，直接运行你的 ofa.js 应用。
+    <div style="margin-top: 8px">
+      <p-button
+        on:click="shadow.$('#fileInputer').ele.click()"
+        attr:disabled="importing"
+      >
+        选择你用ofajs开发的项目
+      </p-button>
+      <input
+        type="file"
+        webkitdirectory
+        style="display: none"
+        id="fileInputer"
+        on:change="fileChange"
+      />
+    </div>
+  </div>
+  <script>
+    export default async ({ load }) => {
+      const { default: get, createRoot } = await load(
+        "https://cdn.jsdelivr.net/gh/kirakiray/noneos@2.1.0/packages/fs/get.js"
+      );
+      const { enqueue } = await load("@pui/snackbar/enqueue.js");
+
+      await createRoot("apps");
+
+      // 将文件导入apps目录下
+      const appsHandle = await get("apps");
+
+      return {
+        data: {
+          importing: false, // 是否正在导入中
+          appList: [],
+        },
+        proto: {
+          async reloadAppList() {},
+          async fileChange(e) {
+            const files = await fileFilter(e.target.files);
+            e.target.value = "";
+
+            this.importing = true;
+
+            for (let file of files) {
+              const handle = await appsHandle.get(
+                file.webkitRelativePath || file.name,
+                {
+                  create: "file",
+                }
+              );
+
+              await handle.write(file);
+            }
+
+            this.importing = false;
+
+            enqueue({
+              content: "导入成功",
+              color: "success",
+            });
+
+            this.reloadAppList();
+          },
+        },
+        attached() {
+          this.reloadAppList();
+        },
+        loaded() {
+          $("#body-loading") && $("#body-loading").remove();
+        },
+      };
+    };
+
+    async function fileFilter(files) {
+      const reFiles = Array.from(files).filter((e) => {
+        const { webkitRelativePath } = e;
+
+        if (!webkitRelativePath) {
+          return true;
+        }
+
+        const paths = webkitRelativePath.split("/");
+
+        return !paths.some((e) => {
+          return e === "node_modules" || /^\./.test(e);
+        });
+      });
+
+      return reFiles;
+    }
+  </script>
+</template>
