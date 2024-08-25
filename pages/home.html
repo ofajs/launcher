@@ -31,11 +31,20 @@
       />
     </div>
     <h4>已安装的应用</h4>
-    <p-list>
+    <p-list style="width: 100%; max-width: 500px; text-align: left">
       <x-fill :value="appList">
         <p-list-item button on:click="$host.openApp($data)">
           {{$data.name}}
           <span secondary>{{$data.href}}</span>
+          <p-button
+            color="error"
+            slot="suffix"
+            size="small"
+            on:click="$host.deleteItem($event,$data)"
+            style="z-index: 3"
+          >
+            删除
+          </p-button>
         </p-list-item>
       </x-fill>
     </p-list>
@@ -43,9 +52,10 @@
   <script>
     export default async ({ load }) => {
       const { default: get, createRoot } = await load(
-        "https://cdn.jsdelivr.net/gh/kirakiray/noneos@2.1.0/packages/fs/get.js"
+        "https://cdn.jsdelivr.net/gh/kirakiray/noneos@2.1.1/packages/fs/get.js"
       );
       const { enqueue } = await load("@pui/snackbar/enqueue.js");
+      const { confirm } = await load("@pui/dialog/command.js");
 
       await createRoot("apps");
 
@@ -58,6 +68,29 @@
           appList: [],
         },
         proto: {
+          async deleteItem(e, data) {
+            e.stopPropagation();
+
+            const result = await confirm({
+              content: `是否删除 ${data.name}？`,
+              yes: "是的，删除",
+              cancel: "取消",
+            });
+
+            if (result) {
+              enqueue({
+                content: `删除 ${data.name} 中...`,
+              });
+              const target = await appsHandle.get(data.name);
+              await target.remove();
+              enqueue({
+                content: `删除 ${data.name} 成功`,
+                color: "success",
+              });
+
+              this.reloadAppList();
+            }
+          },
           openApp(data) {
             window.open(data.href);
           },
